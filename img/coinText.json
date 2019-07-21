@@ -1,0 +1,11 @@
+{
+	'cointext':	{
+		'src':		"coinText.png",
+		'frame':	{
+			"x": 0,
+			"y": 0,
+			"w": 39,
+			"h": 49
+		}
+	}
+}

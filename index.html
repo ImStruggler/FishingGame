@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>捕鱼小游戏</title>
+	<style type="text/css">
+		body{background: black;}
+		#c1{background: url(img/game_bg_2_hd.jpg);margin:0 auto;display: block;}
+	</style>
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script src="js/resources.js" charset="utf-8"></script>
+	<script src="js/common.js"></script>
+	<script src="js/spirit.js"></script>
+	<script src="js/Fish.js"></script>
+	<script src="js/Cannon.js"></script>
+	<script src="js/Bullet.js"></script>
+	<script src="js/Button.js"></script>
+	<script src="js/Coin.js"></script>
+	<script src="js/Shark.js"></script>
+	<script src="js/Score.js"></script>
+	<script>
+		//const $=document.querySelectorAll.bind(document);
+		window.onload = async function(){
+
+			let oC=$('#c1')[0];
+			let W=oC.width,H=oC.height;
+			let gd=oC.getContext('2d');
+
+			let grade=500;
+
+			try{
+				imgs=await loadResources();
+				//console.log(imgs);
+			}catch(e){
+				alert('加载失败，请刷新重试');
+			}
+
+			//音频
+			//var cannon_au = new Audio('snd/cannon.mp3');
+			var coin_au = new Audio('snd/coin.wav');
+			let bg = new Audio('snd/bg.mp3');
+			bg.loop=true;
+			//bg.play();
+			
+			
+
+			//底座
+			let data_bar=__g_resource['bottom'].bottom_bar;
+			let bottom_bar=new Spirit({
+				img: 	data_bar.img,
+				w: 		data_bar.frame.w,
+				h: 		data_bar.frame.h,
+				sx: 	data_bar.frame.x,
+				sy: 	data_bar.frame.y,
+				x: 		398,
+				y: 		566
+			})
+
+
+			//炮弹			
+			let cannon = new Cannon(1);
+			cannon.x=442;
+			cannon.y=572;
+			
+			//炮弹跟着鼠标转
+			oC.onmousemove=function(ev){
+				let x=ev.offsetX-cannon.x;
+				let y=ev.offsetY-cannon.y;
+				cannon.rotation=Math.atan2(y,x)*180/Math.PI+90;
+				// console.log(ev.offsetX,ev.offsetY);
+			}
+
+			//子弹发射
+			let bullets=[];
+			let last_fire=0;
+			let firing=false;
+			oC.onclick=function(ev){
+				let now=Date.now();
+				if(now-last_fire<20){
+					return 
+				}
+				last_fire=now;
+				firing=true;
+				
+				if(grade-cannon.type<0){
+					alert('金币不够啦！请购买金币再游戏。')
+				}else{
+					let bullet=new Bullet(cannon.type);
+					//初始位置与炮弹一致
+					bullet.x=cannon.x;
+					bullet.y=cannon.y;
+
+					//子弹方向
+					bullet.rotation=cannon.rotation;
+
+					bullets.push(bullet);
+
+					grade=grade-bullet.type*2;
+				}		
+
+				//cannon_au.play();
+
+			}
+
+			//换炮——按钮
+			let btnMinus=new Button(__g_resource['bottom'].cannon_minus,
+				__g_resource['bottom'].cannon_minus_down);
+			let btnPlus=new Button(__g_resource['bottom'].cannon_plus, 
+				__g_resource['bottom'].cannon_plus_down);
+
+			btnMinus.x=442-50;
+			btnMinus.y=585;
+
+			btnPlus.x=442+50;
+			btnPlus.y=585;
+
+			
+			//按下按钮，按钮动画
+			oC.onmousedown=function(ev){
+				let minus=false;
+				let plus=false;
+
+				
+				if(btnMinus.checkDown(ev.offsetX,ev.offsetY)){
+					minus=true;					
+				}
+				if(btnPlus.checkDown(ev.offsetX, ev.offsetY)){
+					plus=true;					
+				}
+
+				//换炮
+				if(minus && cannon.type>1){
+					cannon.setType(cannon.type-1);					
+				}
+
+				if(plus && cannon.type<7){
+					cannon.setType(cannon.type+1);
+					
+				}
+			}
+
+			//按钮抬起，按钮动画
+			oC.onmouseup=function(ev){
+				btnMinus.checkUp(ev.offsetX,ev.offsetY);
+				btnPlus.checkUp(ev.offsetX,ev.offsetY);
+			}
+
+			//鱼
+			let fishes=[];
+			let sharks=[];
+
+			//小鱼
+			setInterval(function(){
+				if(Math.random()<0.2){
+					let fish=new Fish(rdmInt(1,6));
+					
+					if(Math.random()<0.5){	//左边出鱼
+						fish.x=-100;
+						fish.y=rdm(0,H);
+						fish.rotation=rdm(70,110);
+					}else{					//右边出鱼
+						fish.x=W+100;
+						fish.y=rdm(0,H);
+						fish.rotation=rdm(-110,-70);
+						fish.scaleY=-1;
+					}					
+					fishes.push(fish);					
+				}
+				
+			},50);
+
+			//鲨鱼
+			setInterval(function(){
+				if(Math.random()<0.1){					
+					let shark=new Shark(Math.random()<0.5?1:2);
+
+					if(Math.random()<0.5){	//左边出鱼			
+						shark.x=-300;
+						shark.y=rdm(0,H);
+						shark.rotation=rdm(70,100);
+					}else{					//右边出鱼						
+						shark.x=W+300;
+						shark.y=rdm(0,H);
+						shark.rotation=rdm(-110,-70);
+						shark.scaleY=-1;
+					}					
+					sharks.push(shark);
+				}
+				
+			},700)
+
+			//币
+			let coins=[];
+
+			//打中后出币
+			function coinOut(flag,kind){
+				let coin;
+				
+				if(flag==1){
+					coin=new Coin(1);								
+				}else{
+					coin=new Coin(2);								
+				}
+				coin.x=kind.x;
+				coin.y=kind.y;
+				coin.rotation=coin.getRotation(100,550);
+
+				coins.push(coin);
+				coin_au.play();
+			}
+
+			//分数
+			let score=[];		
+						
+			//动画 
+			requestAnimationFrame(next);
+			
+			function next(){
+				//1.清除
+				gd.clearRect(0,0,oC.width,oC.height);
+				score=[];
+
+				//开炮后做个标记
+				if(firing){
+					if(cannon.nextFrame()==true){
+						firing=false;
+					}
+				}
+				
+				//2.移动
+				fishes.forEach(fish=>fish.move());
+				fishes.forEach(fish=>fish.nextFrame());
+
+				sharks.forEach(shark=>shark.move());
+				sharks.forEach(shark=>shark.nextFrame());
+				
+				bullets.forEach(bullet=>bullet.move());
+				coins.forEach(coin=>coin.move());
+				coins.forEach(coin=>coin.nextFrame());
+				
+
+				//清除出画布的物体
+				fishes=fishes.filter(fish=>!fish.outOfCanvas(W,H));
+				sharks=sharks.filter(shark=>!shark.outOfCanvas(W,H));
+				bullets=bullets.filter(bullet=>!bullet.outOfCanvas(W,H));
+				//清除金币箱外的币
+				coins=coins.filter(coin=>!coin.outOfCanvas(W,H));
+
+				//检测碰撞
+				bullets.forEach((bullet,b_index)=>{
+					if(bullet.x>0 && bullet.x<W &&
+						bullet.y>0 && bullet.y<H)
+					{
+						fishes.forEach((fish,f_index)=>{
+							if(bullet.collTest(fish)){
+								//打中，消失
+								fishes.splice(f_index,1);
+								bullets.splice(b_index,1);
+
+								//出币
+								coinOut(1,fish);
+
+								//积分
+								if(fish.type<4){
+									grade=grade+2;
+								}else{
+									grade=grade+5;
+								}
+								
+							}
+						});
+						sharks.forEach((shark,s_index)=>{
+							if(bullet.collTest(shark)){
+								//打中，消失
+								sharks.splice(s_index,1);
+								bullets.splice(b_index,1);
+
+								//出币
+								coinOut(2,shark);
+
+								//积分
+								if(shark.type==1){
+									grade=grade+50;
+								}else{
+									grade=grade+100;
+								}
+							}
+						});
+					}								
+
+				});	
+
+				//获取分数
+				grade.toString().split('').forEach(item=>{					
+					let s=new Score();
+					s.getNum(item);
+					score.push(s);
+				});
+
+				score.forEach((s,index)=>{
+					s.x=(s.w*index)+47;//s.w=20					
+					s.y=585;
+				});
+								
+				//3.绘制 注意顺序		
+				coins.forEach(coin=>coin.draw(gd));	
+				sharks.forEach(shark=>shark.draw(gd));	
+				bottom_bar.draw(gd);
+				score.forEach(s=>s.draw(gd));
+				bullets.forEach(bullet=>bullet.draw(gd));
+				cannon.draw(gd);				
+				fishes.forEach(fish=>fish.draw(gd));
+				btnMinus.draw(gd);
+				btnPlus.draw(gd);								
+
+				// console.log(fishes.length,bullets.length);
+				
+				requestAnimationFrame(next);				
+			}			
+		}
+	</script>
+</head>
+<body>
+	<canvas id="c1" width="800" height="600"></canvas>
+
+</body>
+</html>
