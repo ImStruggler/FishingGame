@@ -5,7 +5,7 @@ function loadResource(path){
 			dataType:'text',
 			success(txt){
 
-				//fish.json文件有问题，需解析成json文件
+				//json文件有问题，需解析成json文件
 				let json = eval('('+txt+')');
 						
 				let res = {};
@@ -51,7 +51,8 @@ async function loadResources(){
 		coin: 'coin.json',
 		fish: 'fish.json',
 		number: 'number.json',
-		web: 'web.json'
+		web: 'web.json',
+		cointext: 'coinText.json'
 	};
 	let imgs = {};
 	try{
@@ -59,6 +60,7 @@ async function loadResources(){
 			imgs[name] = await loadResource(src[name]);
 
 		}
+		//console.log(imgs);
 		window.__g_resource = imgs;
 		
 		// return imgs

@@ -18,6 +18,8 @@
 	<script src="js/Coin.js"></script>
 	<script src="js/Shark.js"></script>
 	<script src="js/Score.js"></script>
+	<script src="js/Web.js"></script>
+	<script src="js/CoinText.js"></script>
 	<script>
 		//const $=document.querySelectorAll.bind(document);
 		window.onload = async function(){
@@ -70,11 +72,42 @@
 				// console.log(ev.offsetX,ev.offsetY);
 			}
 
+
+			//换炮——按钮
+			let btnMinus=new Button(__g_resource['bottom'].cannon_minus,
+				__g_resource['bottom'].cannon_minus_down);
+			let btnPlus=new Button(__g_resource['bottom'].cannon_plus, 
+				__g_resource['bottom'].cannon_plus_down);
+
+			btnMinus.x=442-50;
+			btnMinus.y=585;
+
+			btnPlus.x=442+50;
+			btnPlus.y=585;
+
 			//子弹发射
 			let bullets=[];
 			let last_fire=0;
 			let firing=false;
+			//点击事件发生，获取鼠标坐标
+			let Mouse_x=0,Mouse_y=0;
+
 			oC.onclick=function(ev){
+				let e=ev || window.event;
+
+				//e.clientX宽高是相对于浏览器显示区域（窗口）的鼠标坐标
+				//clientWidth是相对于浏览器显示区域（窗口）的宽
+				
+				Mouse_x=e.clientX-(document.body.clientWidth-W)/2;
+				Mouse_y=e.clientY;
+				
+				if(Mouse_x>390 && Mouse_x<btnMinus.w+390 &&
+					Mouse_y>585 && Mouse_y<btnMinus.h+585 ||
+					Mouse_x>490 && Mouse_x<btnPlus.w+490 &&
+					Mouse_y>585 && Mouse_y<btnPlus.h+585){
+					
+					return
+				}
 				let now=Date.now();
 				if(now-last_fire<20){
 					return 
@@ -102,20 +135,9 @@
 
 			}
 
-			//换炮——按钮
-			let btnMinus=new Button(__g_resource['bottom'].cannon_minus,
-				__g_resource['bottom'].cannon_minus_down);
-			let btnPlus=new Button(__g_resource['bottom'].cannon_plus, 
-				__g_resource['bottom'].cannon_plus_down);
-
-			btnMinus.x=442-50;
-			btnMinus.y=585;
-
-			btnPlus.x=442+50;
-			btnPlus.y=585;
 
 			
-			//按下按钮，按钮动画
+			//按下换炮按钮，按钮动画
 			oC.onmousedown=function(ev){
 				let minus=false;
 				let plus=false;
@@ -151,7 +173,7 @@
 
 			//小鱼
 			setInterval(function(){
-				if(Math.random()<0.2){
+				if(Math.random()<0.5){
 					let fish=new Fish(rdmInt(1,6));
 					
 					if(Math.random()<0.5){	//左边出鱼
@@ -167,14 +189,14 @@
 					fishes.push(fish);					
 				}
 				
-			},50);
+			},400);
 
 			//鲨鱼
 			setInterval(function(){
 				if(Math.random()<0.1){					
 					let shark=new Shark(Math.random()<0.5?1:2);
 
-					if(Math.random()<0.5){	//左边出鱼			
+					if(Math.random()<0.6){	//左边出鱼			
 						shark.x=-300;
 						shark.y=rdm(0,H);
 						shark.rotation=rdm(70,100);
@@ -187,7 +209,7 @@
 					sharks.push(shark);
 				}
 				
-			},700)
+			},800)
 
 			//币
 			let coins=[];
@@ -209,8 +231,98 @@
 				coin_au.play();
 			}
 
+			//渔网
+			let webs=[];
+			let clear_frame=0;
+
+			//撒网
+			function castNet(bullet,fish){
+				let web=new Web(bullet.type);
+				//web.x=Mouse_x-(document.body.clientWidth-W)/2;
+				web.x=Math.abs(bullet.x-fish.x)/2+Math.min(bullet.x,fish.x);
+
+				// web.x=bullet.x;
+				web.y=fish.y;
+				bullet=null;
+				setTimeout(function(){
+					web=null;
+				},500)
+				webs.push(web);
+			}
+
 			//分数
-			let score=[];		
+			let score=[];
+
+			//积分倍数
+			let multi_coin=[];
+
+			function multiCoin(flag,kind){
+				//flag:鱼的种类，1:fish 	2:shark
+				//kind:fish或者shark
+				
+				let res=[];
+				if(flag==1 && kind.type>3){
+					for(let i=1;i<=2;i++){
+						let ct=new CoinText();
+						ct.x=kind.x+i*ct.w;
+						ct.y=kind.y;
+						if(i==1)	ct.getNum(10);
+						if(i==2)	ct.getNum(5);						
+						res.push(ct);
+						
+					}					
+				}else if(flag==2 && kind.type==1){
+					if(kind.x<100 || kind.x>W-100 ||
+						kind.y<100 || kind.y>H-100){		//鱼在边缘上，金币翻倍显示在中间
+						for(let i=1;i<4;i++){
+							let ct=new CoinText();
+							ct.x=(W/2-100)+i*ct.w;
+							ct.y=H/2;
+							if(i==1)	ct.getNum(10);
+							if(i==2)	ct.getNum(5);	
+							if(i==3)	ct.getNum(0);												
+							res.push(ct);
+						}
+					}else{
+						for(let i=1;i<4;i++){
+							let ct=new CoinText();
+							ct.x=kind.x+i*ct.w-60;
+							ct.y=kind.y-50;
+							if(i==1)	ct.getNum(10);
+							if(i==2)	ct.getNum(5);	
+							if(i==3)	ct.getNum(0);					
+							res.push(ct);
+						}
+					}	
+				}else if(flag==2 && kind.type==2){
+					if(kind.x<100 || kind.x>W-100 ||
+						kind.y<100 || kind.y>H-100){
+						for(let i=1;i<5;i++){
+							let ct=new CoinText();
+							ct.x=(W/2-100)+i*ct.w;
+							ct.y=H/2;
+							if(i==1)	ct.getNum(10);
+							if(i==2)	ct.getNum(1);	
+							if(i==3)	ct.getNum(0);	
+							if(i==4)	ct.getNum(0);					
+							res.push(ct);
+						}
+					}else{
+						for(let i=1;i<5;i++){
+							let ct=new CoinText();
+							ct.x=kind.x+i*ct.w-60;
+							ct.y=kind.y-50;
+							if(i==1)	ct.getNum(10);
+							if(i==2)	ct.getNum(1);	
+							if(i==3)	ct.getNum(0);	
+							if(i==4)	ct.getNum(0);					
+							res.push(ct);
+						}
+					}
+						
+				}
+				return res
+			}	
 						
 			//动画 
 			requestAnimationFrame(next);
@@ -219,6 +331,14 @@
 				//1.清除
 				gd.clearRect(0,0,oC.width,oC.height);
 				score=[];
+
+				clear_frame++;
+				
+				if(clear_frame==100){
+					webs=[];
+					multi_coin=[];
+					clear_frame=0;
+				}
 
 				//开炮后做个标记
 				if(firing){
@@ -237,6 +357,8 @@
 				bullets.forEach(bullet=>bullet.move());
 				coins.forEach(coin=>coin.move());
 				coins.forEach(coin=>coin.nextFrame());
+
+				//webs.forEach(web=>web.move());
 				
 
 				//清除出画布的物体
@@ -247,48 +369,95 @@
 				coins=coins.filter(coin=>!coin.outOfCanvas(W,H));
 
 				//检测碰撞
+				//
+				//子弹前进过程中，检测子弹与鱼的碰撞距离，
+				//在碰撞范围内则撒网，检测网与鱼的碰撞距离，
+				//在碰撞范围内则打中，出币，显示响应积分倍数
 				bullets.forEach((bullet,b_index)=>{
 					if(bullet.x>0 && bullet.x<W &&
 						bullet.y>0 && bullet.y<H)
 					{
 						fishes.forEach((fish,f_index)=>{
-							if(bullet.collTest(fish)){
-								//打中，消失
-								fishes.splice(f_index,1);
-								bullets.splice(b_index,1);
-
-								//出币
-								coinOut(1,fish);
-
-								//积分
-								if(fish.type<4){
-									grade=grade+2;
-								}else{
-									grade=grade+5;
-								}
-								
+							if(bullet.collTest(1,1,fish)){
+								//撒网
+								castNet(bullet,fish);
+								//子弹消失
+								bullets.splice(b_index,1);															
 							}
 						});
 						sharks.forEach((shark,s_index)=>{
-							if(bullet.collTest(shark)){
-								//打中，消失
-								sharks.splice(s_index,1);
+							if(bullet.collTest(1,2,shark)){
+								//撒网
+								castNet(bullet,shark);
+
+								//子弹消失
 								bullets.splice(b_index,1);
+							}
+						});
+					}							
+
+				});
+
+				webs.forEach((web,w_index)=>{
+					fishes.forEach((fish,f_index)=>{
+						if(web.collTest(2,1,fish)){
+							//打中，消失
+							fishes.splice(f_index,1);											
+
+							//出币
+							coinOut(1,fish);
+
+							//积分倍数
+							multi_coin=multiCoin(1,fish);							
+
+							//积分
+							if(fish.type<4){
+								grade=grade+5;
+							}else{
+								grade=grade+5*5;
+							}								
+						}
+					});
+					sharks.forEach((shark,s_index)=>{
+
+						if(web.collTest(2,2,shark)){
+							if(Math.random()<0.03 && shark.type==1){
+								//打中，消失							
+								sharks.splice(s_index,1);			
 
 								//出币
 								coinOut(2,shark);
 
+								//积分倍数
+								multi_coin=multiCoin(2,shark);
+
 								//积分
 								if(shark.type==1){
-									grade=grade+50;
+									grade=grade+10*50;
 								}else{
-									grade=grade+100;
+									grade=grade+15*100;
+								}
+							}else if(Math.random()<0.01 && shark.type==2){
+								//打中，消失							
+								sharks.splice(s_index,1);			
+
+								//出币
+								coinOut(2,shark);
+
+								//积分倍数
+								multi_coin=multiCoin(2,shark);
+
+								//积分
+								if(shark.type==1){
+									grade=grade+10*50;
+								}else{
+									grade=grade+15*100;
 								}
 							}
-						});
-					}								
-
-				});	
+						}
+					})									
+				})
+				
 
 				//获取分数
 				grade.toString().split('').forEach(item=>{					
@@ -311,7 +480,9 @@
 				cannon.draw(gd);				
 				fishes.forEach(fish=>fish.draw(gd));
 				btnMinus.draw(gd);
-				btnPlus.draw(gd);								
+				btnPlus.draw(gd);
+				webs.forEach(web=>web.draw(gd));
+				multi_coin.forEach(coin=>coin.draw(gd));					
 
 				// console.log(fishes.length,bullets.length);
 				

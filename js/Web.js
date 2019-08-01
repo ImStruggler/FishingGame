@@ -1,7 +1,7 @@
 class Web extends Spirit{
 	constructor(type){
 		if(type>7 || type<1){
-			throw Error('子弹类型在1-7之间');
+			throw Error('渔网类型在1-7之间');
 		}
 		
 
